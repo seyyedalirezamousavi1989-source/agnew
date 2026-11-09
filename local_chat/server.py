@@ -28,7 +28,7 @@ from html.parser import HTMLParser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import parse_qs, unquote, urlencode, urljoin, urlsplit, urlunsplit
+from urllib.parse import parse_qs, quote, unquote, urlencode, urljoin, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 if __package__:
@@ -38,7 +38,8 @@ if __package__:
         list_capabilities,
         register_capability,
     )
-    from .memory import PersistentMemory, parse_memory_command
+    from .memory import (PersistentMemory, parse_memory_command, describe_save_report, format_listing,
+                         MemoryStoreError)
     from .persian_speech import normalize_for_speech
     from . import settings as app_settings
     from . import files as attach_files
@@ -49,6 +50,7 @@ if __package__:
     from . import coding_agent
     from . import forex_service, mt5_data, forex_desk, forex_intent, forex_chart
     from . import context_manager
+    from . import task_service as task_service_module
 else:
     from capabilities import (
         discover_capabilities,
@@ -56,7 +58,8 @@ else:
         list_capabilities,
         register_capability,
     )
-    from memory import PersistentMemory, parse_memory_command
+    from memory import (PersistentMemory, parse_memory_command, describe_save_report, format_listing,
+                        MemoryStoreError)
     from persian_speech import normalize_for_speech
     import settings as app_settings
     import files as attach_files
@@ -67,6 +70,7 @@ else:
     import coding_agent
     import forex_service, mt5_data, forex_desk, forex_intent, forex_chart
     import context_manager
+    import task_service as task_service_module
 
 
 OLLAMA_URL = "http://127.0.0.1:11434"
@@ -520,12 +524,36 @@ def _registered_creator():
     }
 
 
+def _memory_prompt(query):
+    """Memories relevant to the current question (falls back to the plain call for store stand-ins)."""
+    store = _memory_store()
+    try:
+        return store.prompt_context(query=query)
+    except TypeError:
+        return store.prompt_context()
+
+
 def _memory_store():
     global MEMORY_STORE
     with MEMORY_STORE_LOCK:
         if MEMORY_STORE is None:
             MEMORY_STORE = PersistentMemory(APP_DATA_DIR / "memory.sqlite3")
         return MEMORY_STORE
+
+
+TASK_SERVICE = None
+TASK_SERVICE_LOCK = threading.Lock()
+
+
+def _task_service():
+    """Long-running task manager (translation / summarising of big documents); state lives in agent_tasks.sqlite3."""
+    global TASK_SERVICE
+    with TASK_SERVICE_LOCK:
+        if TASK_SERVICE is None:
+            TASK_SERVICE = task_service_module.TaskService(
+                lambda: APP_DATA_DIR, lambda path, payload, timeout=120: _ollama_post(path, payload, timeout),
+                lambda model: _model_context_capacity(model), lambda model: "thinking" in _model_capabilities(model))
+        return TASK_SERVICE
 
 
 def _smtp_settings():
@@ -1452,6 +1480,11 @@ def _restart_ollama():
 
 def _shutdown_app():
     time.sleep(0.4)  # let the HTTP response reach the browser
+    try:
+        if TASK_SERVICE is not None:
+            TASK_SERVICE.stop_all(4)  # running tasks pause with every finished chunk saved; they resume next start
+    except Exception:
+        pass
     _stop_ollama()
     if SHUTDOWN_HOOK is not None:
         SHUTDOWN_HOOK()
@@ -1488,6 +1521,43 @@ def _model_size(model):
         size = 0
     _PROFILE_CACHE[model] = (time.monotonic(), size)
     return size
+
+
+_CTX_CAP_CACHE = {}  # model -> (expires, capacity or None)
+
+
+def _model_context_capacity(model):
+    """The context window the model really supports (Ollama /api/show → model_info), cached; None if unknown."""
+    cached = _CTX_CAP_CACHE.get(model)
+    if cached and time.monotonic() < cached[0]:
+        return cached[1]
+    capacity = None
+    try:
+        capacity = context_manager.capacity_from_show(_ollama_post("/api/show", {"model": model}, timeout=4))
+        ttl = 600
+    except (OSError, URLError, TimeoutError, ValueError, AttributeError, TypeError):
+        ttl = 30
+    _CTX_CAP_CACHE[model] = (time.monotonic() + ttl, capacity)
+    return capacity
+
+
+def _clamp_profile(profile, model):
+    """Never ask for a window bigger than the model supports, and start condensing at ~75 % utilisation.
+
+    The char budget keeps its chars-per-token ratio; only the token room changes.
+    """
+    capacity = _model_context_capacity(model)
+    old_ctx, predict = profile["num_ctx"], profile["num_predict"]
+    ctx = context_manager.effective_context(old_ctx, capacity)
+    if ctx < predict + 512:                      # tiny window: leave at least some room for the prompt
+        predict = max(256, ctx // 3)
+    old_room = max(1, old_ctx - profile["num_predict"])
+    ratio = profile["budget"] / old_room
+    room = max(1, min(ctx - predict, int(ctx * context_manager.COMPRESS_AT)))
+    clamped = {"num_ctx": ctx, "num_predict": predict, "budget": max(1200 if ctx >= 4096 else 600, int(room * ratio))}
+    if ctx == old_ctx and predict == profile["num_predict"] and clamped["budget"] >= profile["budget"]:
+        return profile
+    return clamped
 
 
 def _model_profile(model, extended=False, image_count=0):
@@ -1746,7 +1816,13 @@ def _fit_messages(system_prompt, messages, budget=PROMPT_CHAR_BUDGET, protect_ta
                 overflow = total() - limit
                 keep = max(1200, len(message["content"]) - overflow)
                 message["content"] = message["content"][:keep]
-    digest = context_manager.history_digest(list(older or []) + dropped, reserve) if reserve else ""
+    digest = ""
+    if reserve:
+        gone = list(older or []) + dropped
+        pinned = context_manager.pinned_digest(gone, int(reserve * 0.45))
+        digest = context_manager.history_digest(gone, reserve - len(pinned) - (2 if pinned else 0))
+        if pinned:   # standing instructions / open tasks of the condensed turns are kept verbatim
+            digest = (pinned + "\n\n" + digest) if digest else pinned
     system_text = system_prompt + ("\n\n" + digest if digest else "")
     # «chart» is only the browser's memory aid; Ollama never needs it
     messages = [{k: v for k, v in m.items() if k != "chart"} for m in messages]
@@ -2544,6 +2620,12 @@ class ChatHandler(BaseHTTPRequestHandler):
                 return
             self._send_json(200, {"memories": _memory_store().list()})
             return
+        if path == "/api/tasks" or path.startswith("/api/tasks/"):
+            if not _registered_creator():
+                self._deny_creator()
+                return
+            self._tasks_get(path)
+            return
         if path == "/api/capabilities":
             self._send_json(200, {"capabilities": list_capabilities()})
             return
@@ -2575,6 +2657,7 @@ class ChatHandler(BaseHTTPRequestHandler):
             "/static/app.js": ("app.js", "text/javascript; charset=utf-8"),
             "/static/extras.js": ("extras.js", "text/javascript; charset=utf-8"),
             "/static/forex_capture.js": ("forex_capture.js", "text/javascript; charset=utf-8"),
+            "/static/tasks_panel.js": ("tasks_panel.js", "text/javascript; charset=utf-8"),
         }
         if path == "/static/fonts/Vazirmatn-var.woff2":
             file_path = FONT_FILE
@@ -2858,6 +2941,12 @@ class ChatHandler(BaseHTTPRequestHandler):
              "/api/models/pull": self._pull_model,
              "/api/models/delete": self._delete_model}[path]()
             return
+        if path == "/api/tasks" or path.startswith("/api/tasks/"):
+            if not _registered_creator():
+                self._deny_creator(discard_body=True)
+                return
+            self._tasks_post(path)
+            return
         if path == "/api/identity/start":
             self._start_identity_verification()
             return
@@ -3109,6 +3198,76 @@ class ChatHandler(BaseHTTPRequestHandler):
         stored = ATTACHMENTS.put(record)
         self._send_json(201, {"attachment": attach_files.public_view(stored)})
 
+    # ---- long-running tasks ---------------------------------------------------------
+    def _task_error(self, exc):
+        self._send_json(exc.status, {"error": str(exc)})
+
+    def _tasks_get(self, path):
+        service = _task_service()
+        parts = [p for p in path.split("/") if p][2:]
+        query = parse_qs(urlsplit(self.path).query)
+        try:
+            if not parts:
+                self._send_json(200, {"tasks": service.manager.list()})
+            elif len(parts) == 1:
+                self._send_json(200, {"task": service.detail(parts[0])})
+            elif len(parts) == 2 and parts[1] == "download":
+                data, mime, filename, report = service.download(
+                    parts[0], (query.get("format") or ["docx"])[0], (query.get("partial") or ["0"])[0] == "1")
+                self.send_response(200)
+                self.send_header("Content-Type", mime)
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Content-Disposition", "attachment; filename*=UTF-8''" + quote(filename))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(data)
+            else:
+                self._send_json(404, {"error": "مسیر موردنظر پیدا نشد."})
+        except task_service_module.ServiceError as exc:
+            self._task_error(exc)
+
+    def _tasks_post(self, path):
+        service = _task_service()
+        parts = [p for p in path.split("/") if p][2:]
+        try:
+            if not parts:                                  # new task: raw file body + options in X-Task-Options (JSON)
+                try:
+                    length = int(self.headers.get("Content-Length", "0"))
+                except ValueError:
+                    length = 0
+                if length <= 0 or length > task_service_module.MAX_TASK_UPLOAD:
+                    self._send_json(413, {"error": "فایل خالی یا بزرگ‌تر از حد مجاز (۱۲۸ مگابایت) است."},
+                                    close_connection=True)
+                    return
+                try:
+                    options = json.loads(unquote(self.headers.get("X-Task-Options", "") or "{}"))
+                    if not isinstance(options, dict):
+                        raise ValueError
+                except ValueError:
+                    self._send_json(400, {"error": "گزینه‌های کار معتبر نیست."}, close_connection=True)
+                    return
+                name = unquote(self.headers.get("X-Filename", "") or "document")
+                pieces, remaining = [], length
+                while remaining > 0:
+                    piece = self.rfile.read(min(remaining, 1 << 20))
+                    if not piece:
+                        self._send_json(400, {"error": "ارسال فایل ناقص ماند."}, close_connection=True)
+                        return
+                    pieces.append(piece)
+                    remaining -= len(piece)
+                self._send_json(201, {"task": service.create(name, b"".join(pieces), options)})
+            elif len(parts) == 2:
+                payload = {}
+                if int(self.headers.get("Content-Length", "0") or 0) > 0:
+                    payload = self._read_json_body(max_size=65_536)
+                    if payload is None:
+                        return
+                self._send_json(200, {"task": service.action(parts[0], parts[1], payload)})
+            else:
+                self._send_json(404, {"error": "مسیر موردنظر پیدا نشد."})
+        except task_service_module.ServiceError as exc:
+            self._task_error(exc)
+
     def _delete_attachment(self):
         payload = self._read_json_body(max_size=1024)
         if payload is None:
@@ -3236,10 +3395,10 @@ class ChatHandler(BaseHTTPRequestHandler):
             action, value = memory_command
             store = _memory_store()
             if action == "save":
-                saved = store.add(value)
-                reply = "این مورد را در حافظهٔ محلی ذخیره کردم و در گفت‌وگوهای بعدی هم از آن استفاده می‌کنم."
-                if saved.get("duplicate"):
-                    reply = "این مورد از قبل در حافظه بود؛ متن آن را به‌روزرسانی کردم."
+                try:
+                    reply = describe_save_report(store.save_text(value))
+                except MemoryStoreError:
+                    reply = "ذخیره‌سازی در حافظه ناموفق بود و چیزی ذخیره نشد؛ لطفاً دوباره تلاش کن."
             elif action == "forget":
                 deleted = store.forget(value)
                 reply = f"{deleted} مورد مرتبط از حافظه حذف شد." if deleted else "موردی مطابق این عبارت در حافظه پیدا نکردم."
@@ -3247,11 +3406,7 @@ class ChatHandler(BaseHTTPRequestHandler):
                 deleted = store.forget("")
                 reply = f"حافظهٔ بلندمدت پاک شد؛ {deleted} مورد حذف شد."
             else:
-                items = store.list()
-                reply = "هنوز چیزی در حافظهٔ بلندمدت ذخیره نشده است." if not items else (
-                    "مواردی که در حافظهٔ محلی ذخیره شده‌اند:\n" +
-                    "\n".join(f"• {item['content']}" for item in items)
-                )
+                reply = format_listing(store.list())
             self._reply_text(model, reply)
             return True
         last_text = messages[-1]["content"] if messages[-1]["role"] == "user" else ""
@@ -3353,6 +3508,7 @@ class ChatHandler(BaseHTTPRequestHandler):
             forex_mode = payload.get("forex") is True and not programming
             if forex_mode:
                 profile = _forex_profile(profile)
+            profile = _clamp_profile(profile, model)
             metrics = {"model": model, "route": "chat", "model_calls": 0, "t0": time.monotonic(), "first": None}
             # Models with native tool calling decide what the user wants themselves (one request,
             # no extra intent call). Only models WITHOUT tool calling use the rule-based fallback.
@@ -3454,7 +3610,8 @@ class ChatHandler(BaseHTTPRequestHandler):
                     message["content"] = "\n\n".join(blocks[index]) + "\n\n" + message["content"]
                 if index == images_index and images:
                     message["images"] = images
-            memory_context = _memory_store().prompt_context()
+            memory_context = _memory_prompt(next(
+                (m["content"] for m in reversed(payload["messages"]) if m["role"] == "user"), ""))
             if memory_context:
                 memory_block = "\n\nحافظهٔ بلندمدت تأییدشدهٔ کاربر:\n" + memory_context
                 system_prompt += memory_block
@@ -3506,6 +3663,28 @@ class ChatHandler(BaseHTTPRequestHandler):
                 finally:
                     run["cancelled"].set()
                     coding_agent.end_run(self._session_id, run)
+                return
+
+            # 3b. never send a request that does not fit the window: Ollama would silently drop the start of the
+            # prompt (instructions, earlier turns) and answer from an incomplete request. Condense harder first.
+            fits, usage = context_manager.guard_request(
+                ollama_payload["messages"], profile["num_ctx"], profile["num_predict"], ollama_payload.get("tools"))
+            attempt = 0
+            while not fits and attempt < 3:
+                attempt += 1
+                ollama_payload["messages"] = _fit_messages(
+                    system_prompt, base, max(600, int(prompt_budget * (0.8 ** attempt))),
+                    protect_tail=3 if is_continue else 1, older=older)
+                fits, usage = context_manager.guard_request(
+                    ollama_payload["messages"], profile["num_ctx"], profile["num_predict"], ollama_payload.get("tools"))
+            if not fits:
+                text = ("درخواست از ظرفیت زمینهٔ این مدل بزرگ‌تر است "
+                        f"(حدود {usage.used} توکن از {usage.num_ctx}) و ارسال نشد تا پاسخ ناقص یا بی‌ربط نگیری. "
+                        "پیام را کوتاه‌تر کن، فایل کوچک‌تری پیوست کن یا مدلی با زمینهٔ بزرگ‌تر انتخاب کن.")
+                if streaming:
+                    self._emit({"error": text})
+                else:
+                    self._send_json(413, {"error": text, "code": "context_exceeded", "usage": usage.as_dict()})
                 return
 
             # 4. talk to Ollama

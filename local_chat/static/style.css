@@ -377,3 +377,18 @@ select.settings-input { background: #fff; }
 .message-sources { margin-top: -10px; }
 .message-sources a.media-link { border-color:#cfe6dc; background:#f4fbf8; color:#1a6a52; }
 .message-sources a.media-link:hover { border-color:#18795f; background:#eaf7f1; }
+
+/* long tasks panel */
+.tasks-card { width: min(640px, 100%); }
+.tasks-list { display: grid; gap: 10px; margin-top: 12px; }
+.task-item { border: 1px solid #e8e8e8; border-radius: 12px; padding: 11px 13px; background: #fafafa; }
+.task-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; }
+.task-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-state { font-size: 11px; color: #666; white-space: nowrap; }
+.task-state.completed { color: #2e7d4f; } .task-state.failed, .task-state.partial { color: #b3261e; }
+.task-bar { height: 6px; margin: 9px 0 6px; border-radius: 4px; background: #e4e7e5; overflow: hidden; }
+.task-bar > span { display: block; height: 100%; background: #426b5c; transition: width .3s; }
+.task-meta { font-size: 11px; color: #777; line-height: 1.8; }
+.task-error { font-size: 11px; color: #b3261e; margin-top: 4px; }
+.task-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.task-actions .settings-button { padding: 5px 10px; }

@@ -72,7 +72,7 @@ a = Analysis(
         "numpy", "numpy.core", "numpy.core.multiarray", "numpy.core._multiarray_umath",
         "local_chat.mt5_data", "local_chat.mt5_trade",
         "local_chat.server", "local_chat.capabilities", "local_chat.memory",
-        "local_chat.settings", "local_chat.launcher", "local_chat.files", "local_chat.models_catalog", "local_chat.search_providers", "pypdf", "webview", "webview.platforms.edgechromium", "clr", "tkinter", "tkinter.filedialog",
+        "local_chat.settings", "local_chat.launcher", "local_chat.files", "local_chat.dbutil", "local_chat.docengine", "local_chat.docwriter", "local_chat.quality", "local_chat.pipeline", "local_chat.tasks", "local_chat.task_service", "local_chat.models_catalog", "local_chat.search_providers", "pypdf", "webview", "webview.platforms.edgechromium", "clr", "tkinter", "tkinter.filedialog",
     ],
     excludes=["pytest", "unittest.mock", "pandas", "matplotlib"],
 )

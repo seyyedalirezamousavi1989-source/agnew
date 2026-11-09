@@ -80,7 +80,7 @@ a = Analysis(
         "local_chat.version", "local_chat.search_intent", "local_chat.media_search", "local_chat.search_engine",
         "numpy", "numpy.core", "numpy.core.multiarray", "numpy.core._multiarray_umath",
         "local_chat.server", "local_chat.forex_service", "local_chat.forex_desk", "local_chat.forex_analysis", "local_chat.forex_intent", "local_chat.forex_chart", "local_chat.forex_decision", "local_chat.forex_prob", "local_chat.forex_news", "local_chat.forex_backtest", "local_chat.forex_agent", "local_chat.forex_watch", "local_chat.mt5_data", "local_chat.mt5_trade", "local_chat.capabilities", "local_chat.memory",
-        "local_chat.settings", "local_chat.launcher", "local_chat.files", "local_chat.models_catalog", "local_chat.search_providers", "pypdf", "webview", "webview.platforms.edgechromium", "clr", "tkinter", "tkinter.filedialog", "PIL", "PIL.ImageGrab",
+        "local_chat.settings", "local_chat.launcher", "local_chat.files", "local_chat.dbutil", "local_chat.docengine", "local_chat.docwriter", "local_chat.quality", "local_chat.pipeline", "local_chat.tasks", "local_chat.task_service", "local_chat.models_catalog", "local_chat.search_providers", "pypdf", "webview", "webview.platforms.edgechromium", "clr", "tkinter", "tkinter.filedialog", "PIL", "PIL.ImageGrab",
     ],
     # lxml is not used by LocalChat (the project uses Python's stdlib ElementTree).
     # Excluding it avoids collecting optional lxml Schematron XSL resources,
