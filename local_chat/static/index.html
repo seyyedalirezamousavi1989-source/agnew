@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#212121">
+  <title>گفت‌وگوی محلی</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-top">
+        <a class="brand" href="/" aria-label="صفحهٔ گفت‌وگوی جدید">
+          <span class="brand-mark">✳</span><span>گفت‌وگوی محلی</span>
+        </a>
+        <button class="icon-button mobile-close" id="closeSidebar" aria-label="بستن فهرست">×</button>
+      </div>
+      <button class="new-chat-button" id="newChat">
+        <span class="plus-icon">＋</span><span>گفت‌وگوی جدید</span>
+        <span class="shortcut">Ctrl K</span>
+      </button>
+      <div class="history-heading">گفت‌وگوهای اخیر</div>
+      <nav class="chat-list" id="chatList" aria-label="گفت‌وگوهای قبلی"></nav>
+      <div class="sidebar-bottom">
+        <button class="memory-entry" id="projectsButton" type="button" aria-label="پروژه‌های برنامه‌نویسی" title="پروژه‌ها"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M8 4.5v15M3.5 10h17"/></svg><span>پروژه‌ها</span></button>
+        <button class="memory-entry" id="memoryButton" type="button" aria-label="حافظهٔ بلندمدت من" title="حافظه"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7.5-4.4-7.5-10a4.2 4.2 0 0 1 7.5-2.5A4.2 4.2 0 0 1 19.5 10C19.5 15.6 12 20 12 20Z"/><path d="M8.5 12h2l1.2-2.2 1.8 4 1.1-1.8h1"/></svg><span>حافظه</span></button>
+        <button class="memory-entry" id="modelsButton" type="button" aria-label="مدیریت مدل‌ها" title="مدیریت مدل‌ها"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4.5 7.8 7.5 4.3 7.5-4.3M12 12.1V21"/></svg><span>مدیریت مدل‌ها</span></button>
+        <button class="memory-entry" id="settingsButton" type="button" aria-label="تنظیمات" title="تنظیمات"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.2 1-1.5 2.6-1.5-.6a7.7 7.7 0 0 1-1.5.9l-.3 1.6h-3l-.3-1.6a7.7 7.7 0 0 1-1.5-.9l-1.5.6-1.5-2.6 1.2-1a7.4 7.4 0 0 1 0-1.8l-1.2-1 1.5-2.6 1.5.6a7.7 7.7 0 0 1 1.5-.9l.3-1.6h3l.3 1.6a7.7 7.7 0 0 1 1.5.9l1.5-.6 1.5 2.6-1.2 1a7.4 7.4 0 0 1 0 1.8Z" transform="translate(-.5 -.5) scale(1.04)"/></svg><span>تنظیمات</span></button>
+        <button class="version-badge" id="versionBadge" type="button" title="درباره و نسخه" aria-label="درباره و نسخهٔ برنامه"><span class="version-dot" id="versionDot"></span><span id="versionBadgeText">نسخه …</span></button>
+        <div class="local-note"><span class="status-dot"></span><span>مدل‌ها روی دستگاه شما اجرا می‌شوند</span></div>
+        <div class="hardware-note">مناسب RTX 3060 · زمینه ۸۱۹۲ توکن (با فایل پیوست تا ۱۶۳۸۴)</div>
+        <div class="creator-badge" id="creatorBadge" hidden><span>✦</span><span id="creatorBadgeText"></span></div>
+      </div>
+    </aside>
+
+    <main class="main-panel">
+      <header class="topbar">
+        <button class="icon-button menu-button" id="openSidebar" aria-label="نمایش فهرست گفت‌وگوها">☰</button>
+        <div class="model-picker">
+          <select id="modelSelect" aria-label="انتخاب مدل" disabled>
+            <option>در حال دریافت مدل‌ها…</option>
+          </select>
+          <span class="model-chevron">⌄</span>
+        </div>
+        <div class="connection-state" id="connectionState"><span class="status-dot"></span><span>در حال اتصال</span></div>
+        <button class="power-button" id="powerButton" type="button" title="خاموش کردن برنامه و Ollama" aria-label="خاموش کردن برنامه و Ollama">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v8"/><path d="M6.4 6.8a8 8 0 1 0 11.2 0"/></svg>
+          <span>خاموش کردن</span>
+        </button>
+      </header>
+
+      <section class="conversation" id="conversation" aria-live="polite">
+        <div class="welcome" id="welcome">
+          <div class="welcome-mark">✳</div>
+          <h1>امروز چه چیزی در ذهنته؟</h1>
+          <p>یک مدل محلی انتخاب کن و گفت‌وگو را شروع کن. پیام‌ها در مرورگر می‌مانند؛ فقط درخواست‌های جست‌وجوی وب یا اطلاعات روزآمد به اینترنت فرستاده می‌شوند.</p>
+          <div class="suggestions">
+            <button class="suggestion" data-prompt="یک برنامهٔ روزانهٔ ساده و واقع‌بینانه برایم پیشنهاد بده."><span>✦</span><span>برای برنامه‌ریزی روزانه کمکم کن</span></button>
+            <button class="suggestion" data-prompt="مفهوم یادگیری ماشین را با یک مثال ساده توضیح بده."><span>⌘</span><span>یک مفهوم پیچیده را ساده توضیح بده</span></button>
+            <button class="suggestion" data-prompt="چند ایده برای یک پروژهٔ کوچک برنامه‌نویسی پیشنهاد بده."><span>⌁</span><span>برای یک پروژه ایده بده</span></button>
+            <button class="suggestion" data-prompt="این متن را خلاصه کن و نکته‌های مهمش را فهرست کن: "><span>≡</span><span>متن یا ایده‌ای را خلاصه کن</span></button>
+          </div>
+        </div>
+        <div class="messages" id="messages"></div>
+      </section>
+
+      <footer class="composer-area">
+        <div class="composer-tools">
+          <div class="mode-switch" id="modeSwitch" role="group" aria-label="حالت گفت‌وگو">
+            <button type="button" class="mode-option active" data-mode="general" aria-pressed="true">گفت‌وگوی عمومی</button>
+            <button type="button" class="mode-option" data-mode="programming" aria-pressed="false" title="ساخت پروژه با طرح مرحله‌ای، محیط مجازی و Docker؛ هر اجرا با تأیید شما">برنامه‌نویسی</button>
+          </div>
+          <button class="web-search-button forex-chat-button" id="forexChatButton" type="button" aria-pressed="false" title="تحلیل جفت‌ارزها با داده‌های MetaTrader 5 در همین گفت‌وگو">
+            <span aria-hidden="true">📈</span><span>تحلیل فارکس</span>
+          </button>
+          <button class="web-search-button" id="webSearchButton" type="button" aria-pressed="false" title="پرسش جست‌وجو به موتور انتخاب‌شده در تنظیمات فرستاده می‌شود">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m16 16 4 4M11 7v8M7 11h8"></path></svg>
+            <span>جست‌وجوی وب</span><span class="search-provider-label" id="searchProviderLabel">Google</span>
+          </button>
+          <button class="web-search-button" id="thinkButton" type="button" aria-pressed="false" hidden title="روشن کردن تفکر عمیق مدل (کندتر ولی دقیق‌تر)">
+            <span>تفکر عمیق</span>
+          </button>
+        </div>
+        <form class="composer" id="composer">
+          <div class="attachment-tray" id="attachmentTray" hidden></div>
+          <div class="composer-row">
+            <button class="voice-button" id="recordButton" type="button" title="ضبط گفتار فارسی" aria-label="ضبط گفتار">🎙</button>
+            <button class="voice-button voice-auto-toggle" id="voiceAutoButton" type="button" title="پاسخ صوتی خودکار" aria-label="پاسخ صوتی خودکار خاموش">🔇</button>
+            <button class="attach-button" id="attachButton" type="button" title="پیوست فایل: عکس، کد پایتون، ZIP، PDF، Word/Excel، صدا" aria-label="پیوست فایل" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m21 11.5-8.6 8.6a5.5 5.5 0 0 1-7.8-7.8l8.6-8.6a3.7 3.7 0 0 1 5.2 5.2l-8.6 8.6a1.8 1.8 0 0 1-2.6-2.6l7.9-7.9"/></svg>
+            </button>
+            <input type="file" id="fileInput" multiple hidden>
+            <textarea id="messageInput" rows="1" maxlength="20000" placeholder="پیامی بنویس یا فایل پیوست کن…" aria-label="متن پیام" disabled></textarea>
+            <button class="send-button" id="sendButton" type="submit" aria-label="ارسال پیام" disabled>
+              <svg class="send-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5m-7 7 7-7 7 7"/></svg>
+              <svg class="stop-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+            </button>
+          </div>
+        </form>
+        <p class="disclaimer">پاسخ‌های هوش مصنوعی ممکن است دقیق نباشند. برای اطلاعات مهم، پاسخ را بررسی کن.</p>
+      </footer>
+    </main>
+  </div>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+  <div class="identity-overlay" id="identityOverlay" hidden>
+    <section class="identity-card" role="dialog" aria-modal="true" aria-labelledby="identityTitle">
+      <div class="identity-mark">✦</div>
+      <h2 id="identityTitle">تأیید سازندهٔ اصلی</h2>
+      <p class="identity-description">کد شش‌رقمی محلی را از فایل تنظیمات بخوانید و اینجا وارد کنید.</p>
+      <p class="identity-email" id="identityEmail">seyyedalirezamousavi1368@gmail.com</p>
+      <p class="identity-status" id="identityStatus" role="status">در حال بررسی وضعیت تأیید…</p>
+      <form class="identity-form" id="identityForm">
+        <label for="identityCode">کد ۶ رقمی ایمیل</label>
+        <input id="identityCode" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" placeholder="مثلاً 123456" required>
+        <button class="button-primary" id="verifyIdentityButton" type="submit">تأیید و ثبت سازنده</button>
+      </form>
+      <button class="identity-resend" id="resendIdentityCode" type="button">ارسال یا ارسال دوبارهٔ کد</button>
+      <p class="identity-help">در smtp_settings.json مقدار verification_code را تنظیم کنید. این روش فقط برای استفادهٔ محلی است و مالکیت ایمیل را اثبات نمی‌کند.</p>
+    </section>
+  </div>
+  <div class="memory-overlay" id="projectsOverlay" hidden>
+    <section class="memory-card" role="dialog" aria-modal="true" aria-labelledby="projectsTitle">
+      <button class="memory-close" id="closeProjects" type="button" aria-label="بستن">×</button>
+      <h2 id="projectsTitle">پروژه‌های برنامه‌نویسی</h2>
+      <p id="projectsRoot"></p>
+      <div class="memory-list" id="projectsList"></div>
+      <button class="identity-resend" id="openProjectsFolder" type="button">باز کردن پوشهٔ پروژه‌ها</button>
+    </section>
+  </div>
+  <div class="memory-overlay" id="memoryOverlay" hidden>
+    <section class="memory-card" role="dialog" aria-modal="true" aria-labelledby="memoryTitle">
+      <button class="memory-close" id="closeMemory" type="button" aria-label="بستن">×</button>
+      <h2 id="memoryTitle">حافظهٔ بلندمدت</h2>
+      <p>فقط مواردی در این فهرست می‌مانند که صریحاً خواسته‌ای ذخیره شوند. اطلاعات روی همین رایانه نگهداری می‌شود.</p>
+      <div class="memory-list" id="memoryList"></div>
+      <div class="memory-help">برای ذخیره بگو «یادت باشه ...» و برای حذف بگو «این رو فراموش کن ...».</div>
+    </section>
+  </div>
+  <div class="memory-overlay" id="settingsOverlay" hidden>
+    <section class="memory-card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+      <button class="memory-close" id="closeSettings" type="button" aria-label="بستن">×</button>
+      <h2 id="settingsTitle">تنظیمات</h2>
+      <h3 class="settings-heading">موتور جست‌وجوی وب</h3>
+      <div class="settings-row">
+        <select class="settings-input" id="searchEngine" dir="rtl">
+          <option value="auto">خودکار (چند موتور)</option>
+          <option value="brave">Brave Search</option>
+          <option value="google">Google / Serper</option>
+          <option value="duckduckgo">DuckDuckGo</option>
+          <option value="searxng">SearXNG (نمونهٔ شخصی)</option>
+        </select>
+      </div>
+      <p class="settings-note">حالت خودکار ابتدا DuckDuckGo و Bing RSS و در صورت تنظیم بودن SearXNG را امتحان می‌کند. APIهای کلیددار فقط وقتی نتایج رایگان کافی نباشند استفاده می‌شوند. برای SearXNG باید نمونه‌ای با خروجی JSON فعال وارد کنی؛ نمونه‌های عمومی ممکن است درخواست خودکار را مسدود کنند. کلیدها و نشانی فقط روی همین رایانه ذخیره می‌شوند.</p>
+      <div class="settings-row"><input class="settings-input" id="searxngUrl" type="url" dir="ltr" placeholder="SearXNG HTTPS URL (اختیاری، بدون / انتهایی)"></div>
+      <div class="settings-row"><input class="settings-input" id="serperKey" type="password" dir="ltr" placeholder="Serper API key" autocomplete="off"><input class="settings-input" id="braveKey" type="password" dir="ltr" placeholder="Brave Search API key (اختیاری)" autocomplete="off"></div>
+      <div class="settings-row"><input class="settings-input" id="googleKey" type="password" dir="ltr" placeholder="Google API key (اختیاری)" autocomplete="off"><input class="settings-input" id="googleCx" type="text" dir="ltr" placeholder="cx (اختیاری)" autocomplete="off"></div>
+      <div class="settings-actions"><button class="settings-button primary" id="saveSearch" type="button">ذخیرهٔ تنظیمات جست‌وجو</button><button class="settings-button danger" id="clearSearchKeys" type="button">پاک کردن کلیدها</button></div>
+      <div class="settings-status" id="searchStatus"></div>
+      <h3 class="settings-heading">گفتار و تولید صدای پاسخ</h3>
+      <div class="settings-row"><select class="settings-input" id="ttsProvider"><option value="edge_tts">Edge TTS آنلاین (فارسی زن/مرد)</option><option value="local_parsvoice">ParsVoice محلی</option></select></div>
+      <div class="settings-row"><select class="settings-input" id="ttsVoice"><option value="fa-IR-DilaraNeural">دیـلارا ـ صدای زن</option><option value="fa-IR-FaridNeural">فرید ـ صدای مرد</option><option value="reference">صدای مرجع ParsVoice</option></select><input class="settings-input" id="ttsRate" type="text" dir="ltr" value="+0%" placeholder="+0%"></div>
+      <div class="settings-row"><input class="settings-input" id="ttsModelDir" type="text" dir="ltr" placeholder="مسیر پوشهٔ ParsVoice-XTTS"></div>
+      <div class="settings-row"><input class="settings-input" id="voiceReferenceFile" type="file" accept=".wav,audio/wav"></div>
+      <div class="settings-actions"><button class="settings-button" id="uploadVoiceReference" type="button">بارگذاری صدای مرجع WAV</button></div>
+      <div class="settings-status" id="voiceReferenceStatus"></div>
+      <label class="settings-note"><input id="ttsFallback" type="checkbox"> در صورت قطع Edge TTS، به ParsVoice محلی برگرد</label>
+      <div class="settings-actions"><button class="settings-button primary" id="saveTts" type="button">ذخیرهٔ تنظیمات صوتی</button><button class="settings-button" id="testTts" type="button">آزمایش صدا</button><button class="settings-button" id="diagnoseTts" type="button">عیب‌یابی صدا</button></div>
+      <div class="settings-status" id="ttsStatus" role="status">Edge TTS به اینترنت نیاز دارد. نصب: pip install edge-tts</div>
+      <p class="settings-note">STT و میکروفون با faster-whisper محلی اجرا می‌شوند. محیط آن باید شامل faster-whisper باشد. ParsVoice نیز به محیط جداگانهٔ TTS و فایل‌های مدل و صدای مرجع نیاز دارد.</p>
+      <h3 class="settings-heading">مسیر مدل‌های محلی</h3>
+      <p>پوشه‌ای که Ollama مدل‌ها را از آن می‌خواند (شامل زیرپوشه‌های manifests و blobs). خالی بگذارید تا پیش‌فرض Ollama استفاده شود.</p>
+      <div class="settings-row">
+        <input class="settings-input" id="modelsDirInput" type="text" dir="ltr" placeholder="D:\OllamaModels" autocomplete="off">
+        <button class="settings-button" id="browseModelsDir" type="button" hidden>انتخاب پوشه</button>
+      </div>
+      <div class="settings-status" id="modelsDirStatus"></div>
+      <div class="settings-actions">
+        <button class="settings-button primary" id="saveModelsDir" type="button">ذخیره</button>
+        <button class="settings-button" id="restartOllama" type="button" hidden>اعمال و راه‌اندازی مجدد Ollama</button>
+      </div>
+      <div class="memory-help">تغییر مسیر فقط بعد از راه‌اندازی مجدد Ollama اعمال می‌شود. این کار Ollama در حال اجرا را می‌بندد و دوباره با مسیر جدید اجرا می‌کند؛ گفت‌وگوی در حال تولید قطع می‌شود. برای ذخیره باید هویت سازنده تأیید شده باشد.</div>
+    </section>
+  </div>
+  <div class="memory-overlay" id="aboutOverlay" hidden>
+    <section class="memory-card about-card" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+      <button class="memory-close" id="closeAbout" type="button" aria-label="بستن">×</button>
+      <h2 id="aboutTitle">درباره و نسخه</h2>
+      <div class="about-version" id="aboutVersion">در حال دریافت…</div>
+      <div class="about-warn" id="aboutWarn" hidden></div>
+      <dl class="about-grid" id="aboutGrid"></dl>
+      <h3 class="settings-heading">تغییرات این نسخه</h3>
+      <ul class="about-changes" id="aboutChanges"></ul>
+      <div class="settings-actions"><button class="settings-button primary" id="copyAbout" type="button">کپی اطلاعات نسخه</button><button class="settings-button" id="refreshAbout" type="button">بازخوانی</button></div>
+      <div class="settings-status" id="aboutStatus" role="status"></div>
+    </section>
+  </div>
+  <div class="memory-overlay" id="modelsOverlay" hidden>
+    <section class="memory-card models-card" role="dialog" aria-modal="true" aria-labelledby="modelsTitle">
+      <button class="memory-close" id="closeModels" type="button" aria-label="بستن">×</button>
+      <h2 id="modelsTitle">مدیریت مدل‌ها</h2>
+      <p>مدل‌ها از کتابخانهٔ Ollama دانلود می‌شوند و روی همین دستگاه می‌مانند. برای عکس یک مدل «بینایی» و برای فایل صوتی یک مدل «صوتی» لازم است.</p>
+      <div class="models-tabs" id="modelsTabs" role="tablist">
+        <button type="button" role="tab" data-tab="vision">بینایی 👁</button>
+        <button type="button" role="tab" data-tab="audio">صوتی 🎧</button>
+        <button type="button" role="tab" data-tab="text">متنی</button>
+        <button type="button" role="tab" data-tab="installed">نصب‌شده‌ها</button>
+      </div>
+      <div class="settings-status" id="modelsStatus"></div>
+      <div class="models-list" id="modelsList"></div>
+      <div class="settings-row">
+        <input class="settings-input" id="customModel" type="text" dir="ltr" placeholder="نام دلخواه، مثلاً qwen2.5vl:3b" autocomplete="off">
+        <button class="settings-button primary" id="pullCustom" type="button">دانلود</button>
+      </div>
+    </section>
+  </div>
+  <div class="drop-hint" id="dropHint" hidden>فایل را اینجا رها کن</div>
+  <div class="capture-overlay" id="forexCaptureOverlay" hidden>
+    <section class="capture-card" role="dialog" aria-modal="true" aria-labelledby="captureTitle">
+      <header class="capture-header"><div><h2 id="captureTitle">درخواست تصویر از نمودار</h2><p>پنجرهٔ MT5 یا مانیتور موردنظر را در مجوز مرورگر انتخاب کن. تصویر فقط برای همین درخواست ثبت و به مدل ارسال می‌شود.</p></div><button id="closeForexCapture" type="button" aria-label="بستن">×</button></header>
+      <div class="capture-toolbar"><button type="button" id="captureFrame">ثبت فریم</button><button type="button" data-tool="crop" class="active">برش ناحیه</button><button type="button" data-tool="pen">قلم</button><button type="button" data-tool="line">خط</button><button type="button" data-tool="arrow">فلش</button><button type="button" data-tool="number">شماره</button><button type="button" id="undoCapture">بازگشت</button><button type="button" id="resetCapture">نمای کامل</button><button type="button" id="saveCapture" class="primary" disabled>افزودن به پیام</button></div>
+      <div class="capture-stage"><video id="forexCaptureVideo" autoplay muted playsinline></video><canvas id="forexCaptureCanvas" hidden></canvas><div id="capturePlaceholder">ابتدا «ثبت فریم» را بزن تا تصویر ثابت شود.</div></div>
+      <p class="capture-hint" id="captureHint">برای اشتراک صفحه یا پنجره، پنجرهٔ نمودار را در پنجرهٔ مجوز مرورگر انتخاب کن. تصویر فقط پس از زدن «افزودن به پیام» ارسال می‌شود.</p>
+    </section>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+  <script src="/static/app.js" defer></script>
+  <script src="/static/extras.js" defer></script>
+  <script src="/static/forex_capture.js" defer></script>
+</body>
+</html>
