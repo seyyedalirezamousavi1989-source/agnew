@@ -25,6 +25,7 @@
       <div class="sidebar-bottom">
         <button class="memory-entry" id="projectsButton" type="button" aria-label="پروژه‌های برنامه‌نویسی" title="پروژه‌ها"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M8 4.5v15M3.5 10h17"/></svg><span>پروژه‌ها</span></button>
         <button class="memory-entry" id="memoryButton" type="button" aria-label="حافظهٔ بلندمدت من" title="حافظه"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7.5-4.4-7.5-10a4.2 4.2 0 0 1 7.5-2.5A4.2 4.2 0 0 1 19.5 10C19.5 15.6 12 20 12 20Z"/><path d="M8.5 12h2l1.2-2.2 1.8 4 1.1-1.8h1"/></svg><span>حافظه</span></button>
+        <button class="memory-entry" id="tasksButton" type="button" aria-label="کارهای طولانی (ترجمه و تحلیل اسناد بزرگ)" title="کارهای طولانی"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h8l4 4v13H6z"/><path d="M14 3.5v4h4M9 12h6M9 15.5h6"/></svg><span>کارهای طولانی</span></button>
         <button class="memory-entry" id="modelsButton" type="button" aria-label="مدیریت مدل‌ها" title="مدیریت مدل‌ها"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z"/><path d="m4.5 7.8 7.5 4.3 7.5-4.3M12 12.1V21"/></svg><span>مدیریت مدل‌ها</span></button>
         <button class="memory-entry" id="settingsButton" type="button" aria-label="تنظیمات" title="تنظیمات"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.2 1-1.5 2.6-1.5-.6a7.7 7.7 0 0 1-1.5.9l-.3 1.6h-3l-.3-1.6a7.7 7.7 0 0 1-1.5-.9l-1.5.6-1.5-2.6 1.2-1a7.4 7.4 0 0 1 0-1.8l-1.2-1 1.5-2.6 1.5.6a7.7 7.7 0 0 1 1.5-.9l.3-1.6h3l.3 1.6a7.7 7.7 0 0 1 1.5.9l1.5-.6 1.5 2.6-1.2 1a7.4 7.4 0 0 1 0 1.8Z" transform="translate(-.5 -.5) scale(1.04)"/></svg><span>تنظیمات</span></button>
         <button class="version-badge" id="versionBadge" type="button" title="درباره و نسخه" aria-label="درباره و نسخهٔ برنامه"><span class="version-dot" id="versionDot"></span><span id="versionBadgeText">نسخه …</span></button>
@@ -128,6 +129,22 @@
       <button class="identity-resend" id="openProjectsFolder" type="button">باز کردن پوشهٔ پروژه‌ها</button>
     </section>
   </div>
+  <div class="memory-overlay" id="tasksOverlay" hidden>
+    <section class="memory-card tasks-card" role="dialog" aria-modal="true" aria-labelledby="tasksTitle">
+      <button class="memory-close" id="closeTasks" type="button" aria-label="بستن">×</button>
+      <h2 id="tasksTitle">کارهای طولانی</h2>
+      <p>ترجمه یا خلاصه‌سازی کتاب و اسناد بزرگ (PDF، DOCX، TXT، Markdown، ZIP). فایل تکه‌تکه پردازش می‌شود، پیشرفت ذخیره می‌ماند و بعد از بستن برنامه می‌توانی ادامه بدهی.</p>
+      <div class="settings-row">
+        <select class="settings-input" id="taskKind" dir="rtl"><option value="translate">ترجمه</option><option value="summarize">خلاصه‌سازی</option></select>
+        <select class="settings-input" id="taskTarget" dir="rtl"><option value="fa">به فارسی</option><option value="en">به انگلیسی</option><option value="ar">به عربی</option><option value="de">به آلمانی</option><option value="fr">به فرانسوی</option><option value="tr">به ترکی</option></select>
+      </div>
+      <div class="settings-row"><input class="settings-input" id="taskStyle" type="text" dir="rtl" placeholder="سبک ترجمه (اختیاری)؛ مثلاً: رسمی و ادبی" maxlength="200"></div>
+      <div class="settings-row"><input id="taskFile" type="file" accept=".pdf,.docx,.txt,.md,.markdown,.zip"><button class="settings-button primary" id="taskStart" type="button">شروع</button></div>
+      <div class="settings-status" id="taskStatus"></div>
+      <div class="tasks-list" id="tasksList"></div>
+      <div class="memory-help">مدل از فهرست بالای صفحه استفاده می‌شود. اندازهٔ هر تکه خودکار با ظرفیت واقعی مدل تنظیم می‌شود.</div>
+    </section>
+  </div>
   <div class="memory-overlay" id="memoryOverlay" hidden>
     <section class="memory-card" role="dialog" aria-modal="true" aria-labelledby="memoryTitle">
       <button class="memory-close" id="closeMemory" type="button" aria-label="بستن">×</button>
@@ -227,5 +244,6 @@
   <script src="/static/app.js" defer></script>
   <script src="/static/extras.js" defer></script>
   <script src="/static/forex_capture.js" defer></script>
+  <script src="/static/tasks_panel.js" defer></script>
 </body>
 </html>
